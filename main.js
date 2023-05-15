@@ -2,9 +2,12 @@ const Apify = require('apify');
 const puppeteer = require('puppeteer');
 
 Apify.main(async () => {
+    const input = await Apify.getInput();
+    if (!input || !input.targetUrl) throw new Error('INPUT must contain a targetUrl property!');
+
     const browser = await Apify.launchPuppeteer();
     const page = await browser.newPage();
-    await page.goto('https://podcasts.apple.com/us/genre/podcasts/id26');
+    await page.goto(input.targetUrl);
 
     const results = [];
     const podcastLinks = await page.$$('.top-level-genre a');
@@ -21,6 +24,13 @@ Apify.main(async () => {
         const episodes = await podcastPage.$$('.tracks__items .table__row--secondary');
         const frequency = 'Unknown'; // Not available on Apple Podcasts
         const totalShows = episodes.length;
+
+        // Apply filters
+        if (input.title && title !== input.title) continue;
+        if (input.category && category !== input.category) continue;
+        if (input.host && host !== input.host) continue;
+        if (input.minTotalShows && totalShows < input.minTotalShows) continue;
+        if (input.maxTotalShows && totalShows > input.maxTotalShows) continue;
 
         results.push({
             title,
